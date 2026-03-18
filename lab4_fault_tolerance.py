@@ -12,12 +12,6 @@ MAX_RETRIES = 5
 BASE_DELAY = 1.0  # seconds
 
 def cloud_api_mock(payload):
-    """
-    Simulates a highly unstable Cloud API.
-    - 70% chance of success (HTTP 200)
-    - 20% chance of Rate Limit (HTTP 429)
-    - 10% chance of Server Crash (HTTP 500)
-    """
     roll = random.random()
     if roll < 0.70:
         return True, "200 OK"
@@ -27,7 +21,6 @@ def cloud_api_mock(payload):
         return False, "500 Internal Server Error"
 
 def save_to_dlq(payload):
-    """[Fallback] Saves the failed payload to a local Dead Letter Queue (Disk)."""
     if os.path.exists(DLQ_FILE):
         with open(DLQ_FILE, 'r') as f:
             dlq = json.load(f)
@@ -44,9 +37,6 @@ def save_to_dlq(payload):
     print(f"      [DLQ] Payload safely written to local disk ({DLQ_FILE}).")
 
 def upload_with_backoff(payload):
-    """
-    [Robust Architecture] Implements Exponential Backoff with Jitter.
-    """
     print(f"\n[*] Attempting to upload: {payload}")
     
     for attempt in range(1, MAX_RETRIES + 1):
@@ -60,22 +50,20 @@ def upload_with_backoff(payload):
         
         if attempt < MAX_RETRIES:
             # TODO 1: Calculate Exponential Backoff
-            # Hint: backoff = BASE_DELAY * (2 ** (attempt - 1))
-            
+            backoff = BASE_DELAY * (2 ** (attempt - 1))
             
             # TODO 2: Add Jitter (Randomness)
-            # Hint: Use random.uniform(0, 0.5) to generate jitter
-            
+            jitter = random.uniform(0, 0.5)
             
             # TODO 3: Calculate total sleep time and pause the execution
-            # Hint: sleep_time = backoff + jitter
+            sleep_time = backoff + jitter
+            print(f"      [Backoff] Waiting {sleep_time:.2f}s (backoff={backoff:.1f}s + jitter={jitter:.2f}s)...")
+            time.sleep(sleep_time)
             
-            pass # Remove this pass when implementing
-            
-    # If we exhaust all retries, do not crash!
     print("    -> [Fatal] Max retries reached. Triggering DLQ fallback.")
     
     # TODO 4: Call the DLQ function to save the payload locally
+    save_to_dlq(payload)
     
     return False
 
